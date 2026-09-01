@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test đầy đủ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  body{ font-family: -apple-system, sans-serif; background:#0c0d0f; color:#eee; padding:20px; line-height:1.6; }
+  h1{ font-size:20px; }
+  .box{ background:#161718; border:1px solid #333; border-radius:8px; padding:14px; margin:12px 0; white-space:pre-wrap; word-break:break-word; font-family: monospace; font-size:13px; }
+  .ok{ border-color:#2ecc71; color:#2ecc71; }
+  .err{ border-color:#e74c3c; color:#ff8080; }
+  .pending{ border-color:#888; color:#ccc; }
+</style>
+</head>
+<body>
+<h1>🔍 Test đầy đủ giống trang thật</h1>
+<div id="output"></div>
+
+<script>
+const out = document.getElementById('output');
+
+function addBox(title, content, isError){
+  const div = document.createElement('div');
+  div.className = 'box ' + (isError === undefined ? 'pending' : (isError ? 'err' : 'ok'));
+  div.textContent = title + (content ? ('\n' + content) : '');
+  out.appendChild(div);
+  return div;
+}
+
+async function run(){
+  // Bước 1: kiểm tra window.supabase có tồn tại không (script tag đã load thành công chưa)
+  if(typeof window.supabase === 'undefined'){
+    addBox('❌ window.supabase KHÔNG tồn tại', 'Thẻ <script> tải thư viện đã không chạy được (bị chặn, lỗi mạng, hoặc lỗi CSP)', true);
+    return;
+  }
+  addBox('✅ window.supabase tồn tại', 'Thư viện đã load thành công', false);
+
+  // Bước 2: tạo client giống hệt index.html
+  const SUPABASE_URL = "https://zwlrwzrioufupkauixba.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_kZaeKvOTP8eX-538u_rJMg_5EwWkAb9";
+  let sb;
+  try{
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    addBox('✅ createClient() thành công', '', false);
+  }catch(e){
+    addBox('❌ createClient() BỊ LỖI', String(e && e.message ? e.message : e), true);
+    return;
+  }
+
+  // Bước 3: chạy đúng câu query mà loadProducts() trong index.html đang dùng
+  try{
+    const { data, error } = await sb
+      .from('products')
+      .select('id, category, name, description, sort_order, product_packages(id, duration_label, price, active, sort_order)')
+      .eq('active', true)
+      .order('sort_order', { ascending: true });
+
+    if(error){
+      addBox('❌ Supabase trả về LỖI (error object)', JSON.stringify(error, null, 2), true);
+      return;
+    }
+
+    addBox('✅ Query thành công! Số sản phẩm nhận được: ' + (data ? data.length : 0), JSON.stringify(data, null, 2).slice(0, 1500), false);
+  }catch(e){
+    addBox('❌ Query BỊ THROW EXCEPTION (không rơi vào error object)', String(e && e.stack ? e.stack : e), true);
+  }
+}
+
+run();
+</script>
+</body>
+</html>
